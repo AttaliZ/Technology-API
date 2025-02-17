@@ -3,12 +3,13 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>ข้อมูลอ่างเก็บน้ำ - หน้าแรก (แยกตามจังหวัด/ภาค)</title>
+  <title>ข้อมูลอ่างเก็บน้ำ</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- ใช้ฟอนต์ Orbitron -->
+  <link href="https://fonts.googleapis.com/css?family=Orbitron:400,700&display=swap" rel="stylesheet">
   <style>
-    /* Global Cyberpunk Dark Theme */
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Orbitron', sans-serif;
       margin: 0;
       padding: 20px;
       background-color: #1a1a1a;
@@ -73,7 +74,35 @@
       color: #0ff;
       margin-bottom: 20px;
     }
-    /* Section สำหรับแสดงข้อมูลแต่ละกลุ่ม */
+    /* Search Container */
+    .search-container {
+      margin: 20px 0;
+      text-align: center;
+    }
+    .search-container input[type="text"] {
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #0ff;
+      border-radius: 5px;
+      background-color: #111;
+      color: #0ff;
+      outline: none;
+    }
+    .search-container button {
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      background: linear-gradient(45deg, #ff00ff, #00ffff);
+      color: #fff;
+      cursor: pointer;
+      margin-left: 10px;
+      transition: transform 0.3s ease;
+    }
+    .search-container button:hover {
+      transform: scale(1.05);
+    }
+    /* Group Section */
     .group {
       margin-bottom: 30px;
       text-align: left;
@@ -101,15 +130,22 @@
     <a href="graph_bar.php">Bar Chart</a>
     <a href="graph_pie.php">Pie Chart</a>
     <a href="data_table.php">Table</a>
+    <a href="map_chart.php">Map(Example)</a>
   </div>
   <div class="container">
-    <h1>ข้อมูลอ่างเก็บน้ำ - แยกตามจังหวัด/ภาค</h1>
+    <h1>ข้อมูลอ่างเก็บน้ำ</h1>
+    
+    <!-- Search Container สำหรับค้นหารายชื่ออ่างเก็บน้ำ -->
+    <div class="search-container">
+      <input type="text" id="searchInput" placeholder="ค้นหาอ่างเก็บน้ำ...">
+      <button id="searchBtn">ค้นหา</button>
+    </div>
+    
     <?php
       // จัดกลุ่มข้อมูลอ่างเก็บน้ำโดยใช้ key 'province' ถ้ามี
       // หากไม่มีให้ใช้ key 'region' แทน
       $groups = array();
       foreach ($reservoirs as $reservoir) {
-          // ตรวจสอบว่า มีข้อมูลจังหวัดหรือไม่
           if (isset($reservoir['province']) && !empty($reservoir['province'])) {
               $groupKey = $reservoir['province'];
           } elseif (isset($reservoir['region']) && !empty($reservoir['region'])) {
@@ -142,5 +178,34 @@
       }
     ?>
   </div>
+  
+  <script>
+    // ฟังก์ชันสำหรับค้นหาชื่ออ่างเก็บน้ำในแต่ละกลุ่ม
+    function filterDams() {
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      const groups = document.querySelectorAll('.group');
+      groups.forEach(group => {
+        const items = group.querySelectorAll('.dam-list li');
+        let groupHasMatch = false;
+        items.forEach(item => {
+          if (item.textContent.toLowerCase().indexOf(query) > -1) {
+            item.style.display = '';
+            groupHasMatch = true;
+          } else {
+            item.style.display = 'none';
+          }
+        });
+        // ซ่อนกลุ่มหากไม่มีข้อมูลตรงกับการค้นหา
+        group.style.display = groupHasMatch ? '' : 'none';
+      });
+    }
+    
+    document.getElementById('searchBtn').addEventListener('click', filterDams);
+    document.getElementById('searchInput').addEventListener('keyup', function(e) {
+      if (e.key === 'Enter') {
+        filterDams();
+      }
+    });
+  </script>
 </body>
 </html>

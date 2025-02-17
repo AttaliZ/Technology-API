@@ -3,9 +3,8 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>ข้อมูลอ่างเก็บน้ำ - Cyberpunk Table</title>
+  <title>ข้อมูลอ่างเก็บน้ำ</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- ใช้ฟอนต์ Orbitron สำหรับสไตล์ Cyberpunk -->
   <link href="https://fonts.googleapis.com/css?family=Orbitron:400,700&display=swap" rel="stylesheet">
   <style>
     /* Global Styles */
@@ -56,7 +55,6 @@
       padding: 10px 20px;
       border-radius: 5px;
       background: #000;
-      position: relative;
       transition: all 0.3s ease;
       border: 1px solid #0ff;
     }
@@ -64,7 +62,6 @@
       color: #fff;
       background: linear-gradient(45deg, #ff00ff, #00ffff);
       box-shadow: 0 0 10px #ff00ff, 0 0 10px #00ffff;
-      transform: scale(1.05);
     }
     
     /* Heading */
@@ -73,11 +70,35 @@
       color: #ff00ff;
       margin: 20px 0;
       text-shadow: 0 0 10px #00ffff;
-      animation: neon 2s ease-in-out infinite alternate;
     }
-    @keyframes neon {
-      from { text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff; }
-      to { text-shadow: 0 0 20px #ff00ff, 0 0 30px #ff00ff; }
+    
+    /* Search Box */
+    .search-container {
+      margin: 20px 0;
+      text-align: center;
+    }
+    .search-container input[type="text"] {
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #0ff;
+      border-radius: 5px;
+      background: #000;
+      color: #0ff;
+      outline: none;
+    }
+    .search-container button {
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      background: linear-gradient(45deg, #ff00ff, #00ffff);
+      color: #fff;
+      cursor: pointer;
+      margin-left: 10px;
+      transition: transform 0.3s ease;
+    }
+    .search-container button:hover {
+      transform: scale(1.05);
     }
     
     /* Table Styles */
@@ -87,36 +108,23 @@
       border-collapse: collapse;
     }
     th, td {
-      padding: 12px;
+      padding: 12px 8px;
       border: 1px solid #333;
       text-align: center;
-      transition: background 0.3s, transform 0.3s;
     }
     th {
       background: #1a1a1a;
       color: #0ff;
+      font-weight: bold;
     }
-    tr:nth-child(even) {
+    td {
       background: rgba(0, 0, 0, 0.5);
     }
-    tr:hover {
+    tr:nth-child(even) td {
+      background: rgba(0, 0, 0, 0.3);
+    }
+    tr:hover td {
       background: rgba(0, 255, 255, 0.1);
-      transform: scale(1.02);
-    }
-    /* Glitch effect for table rows */
-    tr {
-      animation: glitch 1s infinite;
-    }
-    @keyframes glitch {
-      0% {
-        text-shadow: 2px 2px 5px #ff00ff;
-      }
-      50% {
-        text-shadow: -2px -2px 5px #00ffff;
-      }
-      100% {
-        text-shadow: 2px 2px 5px #ff00ff;
-      }
     }
     
     /* Responsive adjustments */
@@ -138,8 +146,16 @@
       <a href="graph_bar.php">Bar Chart</a>
       <a href="graph_pie.php">Pie Chart</a>
       <a href="data_table.php">Table</a>
+      <a href="map_chart.php">Map(Example)</a>
     </div>
     <h1>ข้อมูลอ่างเก็บน้ำ</h1>
+    
+    <!-- Search Box -->
+    <div class="search-container">
+      <input type="text" id="searchInput" placeholder="ค้นหาอ่างเก็บน้ำ...">
+      <button id="searchBtn">ค้นหา</button>
+    </div>
+    
     <table>
       <thead>
         <tr>
@@ -175,5 +191,32 @@
       </tbody>
     </table>
   </div>
+  
+  <script>
+    // ฟังก์ชันสำหรับกรองตารางตามชื่ออ่างเก็บน้ำ (ใช้คอลัมน์ที่ 2)
+    function filterTable() {
+      const input = document.getElementById('searchInput');
+      const filter = input.value.toLowerCase();
+      const rows = document.querySelectorAll('table tbody tr');
+      
+      rows.forEach(row => {
+        const nameCell = row.cells[1]; // คอลัมน์ที่ 2: ชื่ออ่างเก็บน้ำ
+        if (nameCell) {
+          const cellText = nameCell.textContent.toLowerCase();
+          row.style.display = cellText.indexOf(filter) > -1 ? '' : 'none';
+        }
+      });
+    }
+    
+    // เมื่อกดปุ่มค้นหา
+    document.getElementById('searchBtn').addEventListener('click', filterTable);
+    
+    // รองรับการกด Enter ในช่องค้นหา
+    document.getElementById('searchInput').addEventListener('keyup', function(e) {
+      if (e.key === 'Enter') {
+        filterTable();
+      }
+    });
+  </script>
 </body>
 </html>

@@ -17,7 +17,7 @@ if (!empty($data['data'])) {
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>Pie Chart - ข้อมูลอ่างเก็บน้ำ (Cyberpunk)</title>
+    <title>ข้อมูลอ่างเก็บน้ำ</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- รวม Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -36,6 +36,7 @@ if (!empty($data['data'])) {
             color: #e0e0e0;
             overflow-x: hidden;
             animation: fadeIn 1s ease-out;
+            text-align: center;
         }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
@@ -122,12 +123,64 @@ if (!empty($data['data'])) {
             color: #fff;
             transform: scale(1.1);
         }
+        /* Search Box */
+        .search-container {
+            margin: 20px 0;
+        }
+        .search-container input[type="text"] {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #0ff;
+            border-radius: 5px;
+            background: #000;
+            color: #0ff;
+            outline: none;
+        }
+        .search-container button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            background: linear-gradient(45deg, #ff00ff, #00ffff);
+            color: #fff;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: transform 0.3s ease;
+        }
+        .search-container button:hover {
+            transform: scale(1.05);
+        }
         /* Canvas */
         canvas {
             background-color: #111;
             border: 1px solid #333;
             border-radius: 8px;
             box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
+        /* Pagination */
+        .pagination {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+        .pagination button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            background: linear-gradient(45deg, #ff00ff, #00ffff);
+            color: #fff;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        .pagination button:hover {
+            transform: scale(1.05);
+        }
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: default;
         }
     </style>
 </head>
@@ -138,12 +191,24 @@ if (!empty($data['data'])) {
         <a href="graph_bar.php">Bar Chart</a>
         <a href="graph_pie.php">Pie Chart</a>
         <a href="data_table.php">Table</a>
+        <a href="map_chart.php">Map(Example)</a>
     </div>
     <div class="container">
-        <h1>ข้อมูลอ่างเก็บน้ำ - Pie Chart (Cyberpunk)</h1>
+        <h1>ข้อมูลอ่างเก็บน้ำ</h1>
         <!-- Tab Bar สำหรับเลือกภาค -->
         <div id="tabBar" class="tab-bar"></div>
+        <!-- Search Box สำหรับค้นหาชื่ออ่างเก็บน้ำในภาคที่เลือก -->
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="ค้นหาชื่ออ่างเก็บน้ำ...">
+            <button id="searchBtn">ค้นหา</button>
+        </div>
         <canvas id="pieChart" width="800" height="400"></canvas>
+        <!-- Pagination -->
+        <div class="pagination">
+            <button id="prevBtn">Previous</button>
+            <span id="pageInfo">Page 1</span>
+            <button id="nextBtn">Next</button>
+        </div>
     </div>
     <script>
         // รับข้อมูลจาก PHP แยกตามภาค
@@ -162,20 +227,43 @@ if (!empty($data['data'])) {
                 // เปลี่ยน active tab
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
                 this.classList.add('active');
-                updateChart(this.dataset.region);
+                // เปลี่ยนภาคที่เลือกและรีเซ็ตการค้นหาและแบ่งหน้า
+                currentRegion = this.dataset.region;
+                currentRegionData = regionsData[currentRegion];
+                filteredData = currentRegionData;
+                currentPage = 1;
+                document.getElementById('searchInput').value = '';
+                updateChart();
             });
             tabBar.appendChild(tab);
         });
 
-        // ฟังก์ชันสำหรับเตรียมข้อมูล Pie Chart สำหรับภาคที่เลือก
-        function getChartData(region) {
-            const reservoirs = regionsData[region];
-            const labels = reservoirs.map(r => r.name);
-            // ใช้ "ความจุทั้งหมด" ของอ่างเก็บน้ำเป็นข้อมูล
-            const storageData = reservoirs.map(r => r.storage || 0);
-            // สร้างสีแบบสุ่มสำหรับแต่ละชิ้นส่วน (สีที่มีสไตล์ neon)
+        // กำหนดตัวแปรสำหรับจัดการค้นหาและแบ่งหน้า
+        let currentRegion = regionNames[0];
+        let currentRegionData = regionsData[currentRegion];
+        let filteredData = currentRegionData; // เริ่มต้นคือข้อมูลทั้งหมดของภาคที่เลือก
+        let currentPage = 1;
+        const itemsPerPage = 10; // จำนวนรายการต่อหน้า
+
+        // ฟังก์ชันกรองข้อมูลตามคำค้น (ค้นหาแบบ case-insensitive)
+        function filterData(query, dataArray) {
+            query = query.toLowerCase();
+            return dataArray.filter(r => r.name && r.name.toLowerCase().includes(query));
+        }
+
+        // ฟังก์ชันแบ่งข้อมูลตามหน้า
+        function getPageData(data, page, perPage) {
+            const start = (page - 1) * perPage;
+            return data.slice(start, start + perPage);
+        }
+
+        // ฟังก์ชันสำหรับสร้างข้อมูล Pie Chart จากอาร์เรย์ข้อมูลที่เลือก (paginated)
+        function getChartData(dataArray) {
+            const labels = dataArray.map(r => r.name);
+            const storageData = dataArray.map(r => r.storage || 0);
+            // สร้างสีแบบสุ่มที่มีสไตล์ neon
             const backgroundColors = labels.map(() => 'rgba(' +
-                Math.floor(Math.random() * 156 + 100) + ', ' +  // ค่าสี 100-255
+                Math.floor(Math.random() * 156 + 100) + ', ' +
                 Math.floor(Math.random() * 156 + 100) + ', ' +
                 Math.floor(Math.random() * 156 + 100) + ', 0.7)'
             );
@@ -183,20 +271,20 @@ if (!empty($data['data'])) {
             return { labels, storageData, backgroundColors, borderColors };
         }
 
-        // สร้าง Pie Chart เริ่มต้นสำหรับภาคแรก
-        const initialRegion = regionNames[0];
-        let chartData = getChartData(initialRegion);
-
+        // สร้าง Pie Chart เริ่มต้นด้วยข้อมูลหน้าแรกของภาคเริ่มต้น
         const ctx = document.getElementById('pieChart').getContext('2d');
+        const initialPageData = getPageData(filteredData, currentPage, itemsPerPage);
+        let initialChartData = getChartData(initialPageData);
+
         let pieChart = new Chart(ctx, {
             type: 'pie',
             data: {
-                labels: chartData.labels,
+                labels: initialChartData.labels,
                 datasets: [{
                     label: 'ความจุทั้งหมด (ล้าน ลบ.ม.)',
-                    data: chartData.storageData,
-                    backgroundColor: chartData.backgroundColors,
-                    borderColor: chartData.borderColors,
+                    data: initialChartData.storageData,
+                    backgroundColor: initialChartData.backgroundColors,
+                    borderColor: initialChartData.borderColors,
                     borderWidth: 1
                 }]
             },
@@ -213,15 +301,56 @@ if (!empty($data['data'])) {
             }
         });
 
-        // ฟังก์ชันสำหรับอัปเดต Pie Chart เมื่อเลือกภาคใหม่
-        function updateChart(region) {
-            const newData = getChartData(region);
-            pieChart.data.labels = newData.labels;
-            pieChart.data.datasets[0].data = newData.storageData;
-            pieChart.data.datasets[0].backgroundColor = newData.backgroundColors;
-            pieChart.data.datasets[0].borderColor = newData.borderColors;
+        // ฟังก์ชันอัปเดต Pie Chart ตามข้อมูลที่กรองและหน้าปัจจุบัน
+        function updateChart() {
+            const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
+            if (currentPage > totalPages) { currentPage = totalPages; }
+            if (currentPage < 1) { currentPage = 1; }
+            const pageData = getPageData(filteredData, currentPage, itemsPerPage);
+            const chartData = getChartData(pageData);
+            pieChart.data.labels = chartData.labels;
+            pieChart.data.datasets[0].data = chartData.storageData;
+            pieChart.data.datasets[0].backgroundColor = chartData.backgroundColors;
+            pieChart.data.datasets[0].borderColor = chartData.borderColors;
             pieChart.update();
+
+            document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${totalPages}`;
+            document.getElementById('prevBtn').disabled = (currentPage <= 1);
+            document.getElementById('nextBtn').disabled = (currentPage >= totalPages);
         }
+
+        // เมื่อกดปุ่มค้นหา ให้กรองข้อมูลในภาคที่เลือกแล้วรีเซ็ตหน้าเป็นหน้าแรก
+        document.getElementById('searchBtn').addEventListener('click', function() {
+            const query = document.getElementById('searchInput').value.trim();
+            filteredData = query ? filterData(query, currentRegionData) : currentRegionData;
+            currentPage = 1;
+            updateChart();
+        });
+
+        // รองรับการกด Enter ในช่องค้นหา
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('searchBtn').click();
+            }
+        });
+
+        // ปุ่มเปลี่ยนหน้าก่อนหน้าและถัดไป
+        document.getElementById('prevBtn').addEventListener('click', function() {
+            if (currentPage > 1) {
+                currentPage--;
+                updateChart();
+            }
+        });
+        document.getElementById('nextBtn').addEventListener('click', function() {
+            const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                updateChart();
+            }
+        });
+
+        // เริ่มต้นแสดงผล Pie Chart
+        updateChart();
     </script>
 </body>
 </html>
